@@ -35,22 +35,21 @@ Build a recommendation system that identifies factory reallocation opportunities
 | ML Framework | scikit-learn, XGBoost |
 | Explainability | SHAP |
 | Data | pandas, NumPy |
-| Serialization | joblib, JSON, Parquet |
+| Serialization | joblib, JSON |
 
 ## 5. Data Flow
 
 ```
 Raw CSV (Nassau Candy Distributor.csv)
     ↓
-Phase 1: Audit → cleaned_dataset.csv
+Phase 4: Feature Engineering + Model Training → winning_model.joblib
     ↓
-Phase 2: Feature Engineering → modeling_dataset.csv
+Phase 5: Simulation → recommendations.csv
+                    → product_reallocation_summary.csv
+                    → recommendation_summary.json
     ↓
-Phase 3: Lead Time Validation
-    ↓
-Phase 4: Model Training → winning_model.joblib
-    ↓
-Phase 5: Simulation → recommendations.csv, product_reallocation_summary.csv
+Validation Audit → recommendation_integrity_audit.md
+                 → audit_results.json, dashboard_readiness.json
     ↓
 Phase 6: Dashboard → app.py (Streamlit)
 ```
@@ -65,18 +64,21 @@ Phase 6: Dashboard → app.py (Streamlit)
 
 ## 7. Validation Results
 
-All 7 integrity checks passed:
+All integrity and business-quality checks passed:
 - No cross-division violations
 - No invalid factories
 - No missing scores or confidence values
 - Row count integrity (10,194)
 - Row uniqueness verified
-- Batch prediction architecture confirmed
+- Positive distance savings on every CHANGE recommendation
+- Positive composite score on every CHANGE recommendation
+- Summary statistics consistent with detail tables
+- Batch prediction architecture confirmed (2 predict calls)
 
 ## 8. Repository Structure
 
-See `docs/architecture.md` for full folder layout and component relationships.
+See `README.md` for the full folder layout and component relationships.
 
 ---
 
-*For methodology details, see `docs/methodology.md`. For business rules, see `docs/business_rules.md`.*
+*For methodology and business rules, see the Phase 5 report (`reports/phase5/phase5_report.md`) and the recommendation integrity audit (`reports/final/recommendation_integrity_audit.md`).*

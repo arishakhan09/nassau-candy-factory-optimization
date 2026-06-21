@@ -1,16 +1,16 @@
 product_id,product_name,division,current_production_site,proposed_production_site,change_recommended,orders_affected,avg_current_distance_km,avg_proposed_distance_km,avg_distance_reduction_km,avg_distance_reduction_pct,avg_lt_change_days,avg_composite_score,avg_confidence,dominant_recommendation,dominant_risk_level,efficiency_class,total_route_km_saved
-SUG-FUN-75000,Fun Dip,Sugar,Sugar Shack,The Other Factory,True,3,2103.0,861.8,1325.2,60.66,0.096,0.5856,0.9057,STRONG RECOMMEND,Medium,HIGH,2650.0
-CHO-FUD-51000,Wonka Bar - Fudge Mallows,Chocolate,Lot's O' Nuts,Wicked Choccy's,True,1818,2047.3,1006.2,1693.9,55.18,0.03,0.5558,0.9057,STRONG RECOMMEND,Low,HIGH,2115719.0
-CHO-SCR-58000,Wonka Bar -Scrumdiddlyumptious,Chocolate,Lot's O' Nuts,Wicked Choccy's,True,2064,2023.3,1016.3,1687.1,54.83,0.002,0.5542,0.9057,STRONG RECOMMEND,Low,HIGH,2348504.0
-CHO-NUT-13000,Wonka Bar - Nutty Crunch Surprise,Chocolate,Lot's O' Nuts,Wicked Choccy's,True,1810,1991.9,1009.0,1619.3,53.37,0.005,0.5477,0.9057,STRONG RECOMMEND,Low,HIGH,2004654.0
-SUG-EVE-47000,Everlasting Gobstopper,Sugar,Secret Factory,The Other Factory,True,3,1798.9,861.8,558.8,39.46,-0.018,0.5048,0.9057,STRONG RECOMMEND,Medium,HIGH,1118.0
-CHO-TRI-54000,Wonka Bar - Triple Dazzle Caramel,Chocolate,Wicked Choccy's,Lot's O' Nuts,True,2015,1819.0,1006.5,1617.6,43.27,-0.031,0.4746,0.9057,NO CHANGE,Low,HIGH,1823012.0
-CHO-MIL-31000,Wonka Bar - Milk Chocolate,Chocolate,Wicked Choccy's,Lot's O' Nuts,True,2137,1774.0,1034.1,1531.9,40.54,-0.033,0.4594,0.9057,NO CHANGE,Low,HIGH,1784635.0
-SUG-NER-92000,Nerds,Sugar,Sugar Shack,Secret Factory,True,4,1935.0,1388.3,546.7,28.26,-0.048,0.4216,0.9057,STRONG RECOMMEND,Medium,MODERATE,2187.0
-SUG-LAF-25000,Laffy Taffy,Sugar,Sugar Shack,Secret Factory,True,10,2072.2,1555.1,447.3,23.34,-0.059,0.3908,0.8912,STRONG RECOMMEND,Medium,MODERATE,3131.0
-SUG-SWE-91000,SweeTARTS,Sugar,Sugar Shack,Secret Factory,True,10,2025.2,1582.8,430.7,22.52,-0.108,0.3806,0.8888,STRONG RECOMMEND,Medium,MODERATE,2584.0
-OTH-GUM-21000,Wonka Gum,Other,Secret Factory,The Other Factory,True,120,1674.2,1467.1,207.1,14.79,-0.001,0.3433,0.7885,MODERATE RECOMMEND,High,NEGLIGIBLE,24849.0
-OTH-FIZ-56000,Fizzy Lifting Drinks,Sugar,Sugar Shack,Secret Factory,True,6,2115.5,1777.4,314.7,16.77,0.005,0.3339,0.8718,STRONG RECOMMEND,Medium,MODERATE,944.0
-OTH-LIC-15000,Lickable Wallpaper,Other,Secret Factory,The Other Factory,True,94,1816.4,1728.5,87.9,6.52,0.026,0.2826,0.7365,MODERATE RECOMMEND,High,NEGLIGIBLE,8265.0
-OTH-KAZ-38000,Kazookles,Other,The Other Factory,Secret Factory,True,96,1662.6,1822.1,-35.5,-6.95,-0.021,0.2414,0.7301,STRONG RECOMMEND,Medium,NEGLIGIBLE,-2981.0
-SUG-HAI-55000,Hair Toffee,Sugar,The Other Factory,Secret Factory,True,4,1909.0,1430.0,-194.3,-23.51,0.018,0.1921,0.847,MODERATE RECOMMEND,Medium,LOW,-389.0
+CHO-MIL-31000,Wonka Bar - Milk Chocolate,Chocolate,Wicked Choccy's,Lot's O' Nuts,True,2137,1604.4,614.5,1814.0,74.7,-5.224,0.6371,0.8811,NO CHANGE,Low,HIGH,1208124.0
+CHO-TRI-54000,Wonka Bar - Triple Dazzle Caramel,Chocolate,Wicked Choccy's,Lot's O' Nuts,True,2015,1619.2,614.5,1814.0,74.7,-2.247,0.6368,0.8811,NO CHANGE,Low,HIGH,1226264.0
+OTH-FIZ-56000,Fizzy Lifting Drinks,Sugar,Sugar Shack,The Other Factory,True,6,2333.3,835.1,1320.0,60.6,-11.22,0.5923,0.8811,STRONG RECOMMEND,Medium,HIGH,3960.0
+SUG-FUN-75000,Fun Dip,Sugar,Sugar Shack,The Other Factory,True,3,2719.1,861.8,1436.9,61.82,44.025,0.5891,0.8811,STRONG RECOMMEND,Medium,HIGH,2874.0
+SUG-NER-92000,Nerds,Sugar,Sugar Shack,Secret Factory,True,4,3559.9,1388.3,2171.6,61.0,-20.536,0.5537,0.8811,STRONG RECOMMEND,Medium,HIGH,8686.0
+SUG-LAF-25000,Laffy Taffy,Sugar,Sugar Shack,Secret Factory,True,10,2910.1,1388.3,2171.6,61.0,-3.637,0.5518,0.8811,STRONG RECOMMEND,Medium,HIGH,13030.0
+SUG-SWE-91000,SweeTARTS,Sugar,Sugar Shack,Secret Factory,True,10,2568.6,1388.3,2171.6,61.0,4.327,0.5507,0.8811,STRONG RECOMMEND,Medium,HIGH,10858.0
+SUG-HAI-55000,Hair Toffee,Sugar,The Other Factory,Secret Factory,True,4,2362.2,1430.0,2154.6,59.94,-25.916,0.5465,0.8811,NO CHANGE,Low,HIGH,4309.0
+OTH-KAZ-38000,Kazookles,Other,The Other Factory,Secret Factory,True,96,2690.6,1407.9,1987.7,56.8,0.02,0.5329,0.8811,STRONG RECOMMEND,Medium,HIGH,131188.0
+SUG-EVE-47000,Everlasting Gobstopper,Sugar,Secret Factory,The Other Factory,True,3,1680.0,861.8,260.6,22.34,-4.714,0.4364,0.8404,STRONG RECOMMEND,Medium,LOW,521.0
+CHO-NUT-13000,Wonka Bar - Nutty Crunch Surprise,Chocolate,Lot's O' Nuts,Wicked Choccy's,True,1810,2248.9,2014.8,808.0,36.62,1.164,0.4095,0.8811,STRONG RECOMMEND,Low,LOW,1066599.0
+CHO-FUD-51000,Wonka Bar - Fudge Mallows,Chocolate,Lot's O' Nuts,Wicked Choccy's,True,1818,2202.2,2039.3,809.7,36.59,0.053,0.4077,0.8811,STRONG RECOMMEND,Low,LOW,1028378.0
+CHO-SCR-58000,Wonka Bar -Scrumdiddlyumptious,Chocolate,Lot's O' Nuts,Wicked Choccy's,True,2064,2227.7,2093.7,793.1,35.43,-1.715,0.3994,0.8811,STRONG RECOMMEND,Low,LOW,1142886.0
+OTH-GUM-21000,Wonka Gum,Other,Secret Factory,The Other Factory,True,120,1473.7,1439.3,240.8,17.18,-2.4,0.3736,0.8527,STRONG RECOMMEND,Medium,LOW,19990.0
+OTH-LIC-15000,Lickable Wallpaper,Other,Secret Factory,The Other Factory,True,94,1676.2,1846.5,224.5,13.4,-1.539,0.3289,0.8604,NO CHANGE,Medium,LOW,13247.0

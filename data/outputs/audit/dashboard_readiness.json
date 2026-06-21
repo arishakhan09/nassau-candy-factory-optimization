@@ -1,0 +1,12 @@
+{
+  "dashboard_ready": true,
+  "readiness_pct": 100.0,
+  "checks_passed": 4,
+  "checks_total": 4,
+  "all_files_present": true,
+  "rec_columns_ok": true,
+  "prod_columns_ok": true,
+  "summary_keys_ok": true,
+  "missing_files": [],
+  "generated_at": "2026-06-21T22:01:53"
+}

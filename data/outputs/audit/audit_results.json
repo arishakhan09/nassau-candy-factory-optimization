@@ -1,0 +1,451 @@
+{
+  "recommendations": {
+    "integrity": {
+      "row_count_ok": true,
+      "row_count_actual": 10194,
+      "row_count_expected": 10194,
+      "uniqueness_ok": true,
+      "invalid_factories": [],
+      "no_invalid_factories": true,
+      "invalid_categories": [],
+      "no_invalid_categories": true,
+      "missing_confidence": 0,
+      "no_missing_confidence": true,
+      "missing_scores": 0,
+      "no_missing_scores": true,
+      "cross_division_violations": 0,
+      "no_cross_division_violations": true
+    },
+    "chocolate_products": [
+      {
+        "product_id": "CHO-FUD-51000",
+        "current_site": "Lot's O' Nuts",
+        "proposed_site": "Wicked Choccy's",
+        "orders_affected": 1818,
+        "avg_current_dist_km": 2202.2,
+        "avg_proposed_dist_km": 2039.3,
+        "dist_reduction_pct": 36.59,
+        "avg_current_lt": 1314.44,
+        "avg_proposed_lt": 1314.478,
+        "composite_score": 0.4077
+      },
+      {
+        "product_id": "CHO-SCR-58000",
+        "current_site": "Lot's O' Nuts",
+        "proposed_site": "Wicked Choccy's",
+        "orders_affected": 2064,
+        "avg_current_dist_km": 2227.7,
+        "avg_proposed_dist_km": 2093.7,
+        "dist_reduction_pct": 35.43,
+        "avg_current_lt": 1317.801,
+        "avg_proposed_lt": 1316.603,
+        "composite_score": 0.3994
+      },
+      {
+        "product_id": "CHO-NUT-13000",
+        "current_site": "Lot's O' Nuts",
+        "proposed_site": "Wicked Choccy's",
+        "orders_affected": 1810,
+        "avg_current_dist_km": 2248.9,
+        "avg_proposed_dist_km": 2014.8,
+        "dist_reduction_pct": 36.62,
+        "avg_current_lt": 1327.164,
+        "avg_proposed_lt": 1328.013,
+        "composite_score": 0.4095
+      },
+      {
+        "product_id": "CHO-MIL-31000",
+        "current_site": "Wicked Choccy's",
+        "proposed_site": "Lot's O' Nuts",
+        "orders_affected": 2137,
+        "avg_current_dist_km": 1604.4,
+        "avg_proposed_dist_km": 614.5,
+        "dist_reduction_pct": 74.7,
+        "avg_current_lt": 1317.862,
+        "avg_proposed_lt": 1316.233,
+        "composite_score": 0.6371
+      },
+      {
+        "product_id": "CHO-TRI-54000",
+        "current_site": "Wicked Choccy's",
+        "proposed_site": "Lot's O' Nuts",
+        "orders_affected": 2015,
+        "avg_current_dist_km": 1619.2,
+        "avg_proposed_dist_km": 614.5,
+        "dist_reduction_pct": 74.7,
+        "avg_current_lt": 1321.04,
+        "avg_proposed_lt": 1320.286,
+        "composite_score": 0.6368
+      }
+    ],
+    "region_breakdown": [
+      {
+        "product_id": "CHO-FUD-51000",
+        "region": "Pacific",
+        "n_orders": 569,
+        "lon_dist_km": 614.0,
+        "wc_dist_km": 3450.0,
+        "closer": "LON",
+        "recommendation": "MODERATE RECOMMEND"
+      },
+      {
+        "product_id": "CHO-FUD-51000",
+        "region": "Atlantic",
+        "n_orders": 548,
+        "lon_dist_km": 3445.0,
+        "wc_dist_km": 1150.0,
+        "closer": "WC",
+        "recommendation": "NO CHANGE"
+      },
+      {
+        "product_id": "CHO-FUD-51000",
+        "region": "Interior",
+        "n_orders": 410,
+        "lon_dist_km": 1594.0,
+        "wc_dist_km": 1385.0,
+        "closer": "WC",
+        "recommendation": "STRONG RECOMMEND"
+      },
+      {
+        "product_id": "CHO-FUD-51000",
+        "region": "Gulf",
+        "n_orders": 291,
+        "lon_dist_km": 2856.0,
+        "wc_dist_km": 201.0,
+        "closer": "WC",
+        "recommendation": "STRONG RECOMMEND"
+      },
+      {
+        "product_id": "CHO-SCR-58000",
+        "region": "Pacific",
+        "n_orders": 672,
+        "lon_dist_km": 614.0,
+        "wc_dist_km": 3450.0,
+        "closer": "LON",
+        "recommendation": "MODERATE RECOMMEND"
+      },
+      {
+        "product_id": "CHO-SCR-58000",
+        "region": "Atlantic",
+        "n_orders": 623,
+        "lon_dist_km": 3445.0,
+        "wc_dist_km": 1150.0,
+        "closer": "WC",
+        "recommendation": "NO CHANGE"
+      },
+      {
+        "product_id": "CHO-SCR-58000",
+        "region": "Interior",
+        "n_orders": 459,
+        "lon_dist_km": 1594.0,
+        "wc_dist_km": 1385.0,
+        "closer": "WC",
+        "recommendation": "STRONG RECOMMEND"
+      },
+      {
+        "product_id": "CHO-SCR-58000",
+        "region": "Gulf",
+        "n_orders": 310,
+        "lon_dist_km": 2856.0,
+        "wc_dist_km": 201.0,
+        "closer": "WC",
+        "recommendation": "STRONG RECOMMEND"
+      },
+      {
+        "product_id": "CHO-NUT-13000",
+        "region": "Pacific",
+        "n_orders": 572,
+        "lon_dist_km": 614.0,
+        "wc_dist_km": 3450.0,
+        "closer": "LON",
+        "recommendation": "MODERATE RECOMMEND"
+      },
+      {
+        "product_id": "CHO-NUT-13000",
+        "region": "Atlantic",
+        "n_orders": 490,
+        "lon_dist_km": 3445.0,
+        "wc_dist_km": 1150.0,
+        "closer": "WC",
+        "recommendation": "NO CHANGE"
+      },
+      {
+        "product_id": "CHO-NUT-13000",
+        "region": "Interior",
+        "n_orders": 452,
+        "lon_dist_km": 1594.0,
+        "wc_dist_km": 1385.0,
+        "closer": "WC",
+        "recommendation": "STRONG RECOMMEND"
+      },
+      {
+        "product_id": "CHO-NUT-13000",
+        "region": "Gulf",
+        "n_orders": 296,
+        "lon_dist_km": 2856.0,
+        "wc_dist_km": 201.0,
+        "closer": "WC",
+        "recommendation": "STRONG RECOMMEND"
+      }
+    ]
+  },
+  "distances": {
+    "distance_matrix": [
+      {
+        "factory": "Lot's O' Nuts",
+        "pacific_km": 614.0,
+        "atlantic_km": 3445.0,
+        "interior_km": 1594.0,
+        "gulf_km": 2856.0,
+        "weighted_avg": 2017.0
+      },
+      {
+        "factory": "Wicked Choccy's",
+        "pacific_km": 3450.0,
+        "atlantic_km": 1150.0,
+        "interior_km": 1385.0,
+        "gulf_km": 201.0,
+        "weighted_avg": 1791.0
+      }
+    ],
+    "choco_demand_by_region": [
+      {
+        "region": "Pacific",
+        "orders": 3155,
+        "share_pct": 32.0
+      },
+      {
+        "region": "Atlantic",
+        "orders": 2858,
+        "share_pct": 29.0
+      },
+      {
+        "region": "Interior",
+        "orders": 2271,
+        "share_pct": 23.1
+      },
+      {
+        "region": "Gulf",
+        "orders": 1560,
+        "share_pct": 15.8
+      }
+    ],
+    "closest_factory_per_region": [
+      {
+        "region": "Pacific",
+        "closest_factory": "Lot's O' Nuts",
+        "savings_km": 2836.0
+      },
+      {
+        "region": "Atlantic",
+        "closest_factory": "Wicked Choccy's",
+        "savings_km": 2295.0
+      },
+      {
+        "region": "Interior",
+        "closest_factory": "Wicked Choccy's",
+        "savings_km": 209.0
+      },
+      {
+        "region": "Gulf",
+        "closest_factory": "Wicked Choccy's",
+        "savings_km": 2655.0
+      }
+    ],
+    "avg_distance_reduction_km": 1050.0,
+    "avg_distance_reduction_pct": 45.2,
+    "total_route_km_saved": 5896823.0,
+    "distance_reduction_verified": true
+  },
+  "business_rules": {
+    "cross_division_violations": 0,
+    "no_cross_division_violations": true,
+    "score_category_inconsistencies": 0,
+    "score_category_ok": true,
+    "ineligible_factory_assignments": 0,
+    "factory_eligibility_ok": true,
+    "recommendation_counts": {
+      "NO CHANGE": 4578,
+      "STRONG RECOMMEND": 3740,
+      "MODERATE RECOMMEND": 1876
+    },
+    "all_business_rules_passed": true
+  },
+  "workload": {
+    "factory_workload": [
+      {
+        "factory": "Lot's O' Nuts",
+        "current_orders": 5692,
+        "proposed_orders": 3003,
+        "delta": -2689,
+        "current_share_pct": 55.8,
+        "proposed_share_pct": 29.5
+      },
+      {
+        "factory": "Wicked Choccy's",
+        "current_orders": 4152,
+        "proposed_orders": 6841,
+        "delta": 2689,
+        "current_share_pct": 40.7,
+        "proposed_share_pct": 67.1
+      },
+      {
+        "factory": "Sugar Shack",
+        "current_orders": 33,
+        "proposed_orders": 4,
+        "delta": -29,
+        "current_share_pct": 0.3,
+        "proposed_share_pct": 0.0
+      },
+      {
+        "factory": "Secret Factory",
+        "current_orders": 217,
+        "proposed_orders": 158,
+        "delta": -59,
+        "current_share_pct": 2.1,
+        "proposed_share_pct": 1.5
+      },
+      {
+        "factory": "The Other Factory",
+        "current_orders": 100,
+        "proposed_orders": 188,
+        "delta": 88,
+        "current_share_pct": 1.0,
+        "proposed_share_pct": 1.8
+      }
+    ],
+    "score_decomposition": {
+      "rows": [
+        {
+          "component": "S_distance (40%)",
+          "weighted_contribution": 0.181,
+          "share_pct": 39.0
+        },
+        {
+          "component": "S_cost (25%)",
+          "weighted_contribution": 0.128,
+          "share_pct": 27.6
+        },
+        {
+          "component": "S_leadtime (15%)",
+          "weighted_contribution": -0.0001,
+          "share_pct": -0.0
+        },
+        {
+          "component": "S_utilization (10%)",
+          "weighted_contribution": 0.0574,
+          "share_pct": 12.3
+        },
+        {
+          "component": "S_risk (10%)",
+          "weighted_contribution": 0.0983,
+          "share_pct": 21.2
+        }
+      ],
+      "total": 0.4645
+    },
+    "chocolate_score_decomposition": {
+      "rows": [
+        {
+          "component": "Distance",
+          "weighted_contribution": 0.1832,
+          "share_pct": 39.3
+        },
+        {
+          "component": "Cost",
+          "weighted_contribution": 0.1274,
+          "share_pct": 27.3
+        },
+        {
+          "component": "Lead Time",
+          "weighted_contribution": -0.0001,
+          "share_pct": -0.0
+        },
+        {
+          "component": "Utilization",
+          "weighted_contribution": 0.0555,
+          "share_pct": 11.9
+        },
+        {
+          "component": "Risk",
+          "weighted_contribution": 0.1,
+          "share_pct": 21.5
+        }
+      ],
+      "total": 0.466
+    },
+    "risk_distribution": {
+      "Low": 9951,
+      "Medium": 243
+    }
+  },
+  "dashboard_readiness": {
+    "required_files": [
+      {
+        "file": "recommendations.csv",
+        "exists": true,
+        "size_kb": 2354.9,
+        "status": "OK"
+      },
+      {
+        "file": "product_reallocation_summary.csv",
+        "exists": true,
+        "size_kb": 2.7,
+        "status": "OK"
+      },
+      {
+        "file": "recommendation_summary.json",
+        "exists": true,
+        "size_kb": 0.9,
+        "status": "OK"
+      },
+      {
+        "file": "model_comparison.csv",
+        "exists": true,
+        "size_kb": 0.6,
+        "status": "OK"
+      },
+      {
+        "file": "feature_importance.csv",
+        "exists": true,
+        "size_kb": 1.2,
+        "status": "OK"
+      },
+      {
+        "file": "shap_importance.csv",
+        "exists": true,
+        "size_kb": 0.7,
+        "status": "OK"
+      },
+      {
+        "file": "winning_model.joblib",
+        "exists": true,
+        "size_kb": 128952.6,
+        "status": "OK"
+      },
+      {
+        "file": "label_encoders.joblib",
+        "exists": true,
+        "size_kb": 1.8,
+        "status": "OK"
+      },
+      {
+        "file": "model_features.json",
+        "exists": true,
+        "size_kb": 1.4,
+        "status": "OK"
+      }
+    ],
+    "all_files_present": true,
+    "missing_rec_columns": [],
+    "rec_columns_ok": true,
+    "missing_prod_columns": [],
+    "prod_columns_ok": true,
+    "missing_summary_keys": [],
+    "summary_keys_ok": true,
+    "checks_passed": 4,
+    "checks_total": 4,
+    "readiness_pct": 100.0,
+    "dashboard_ready": true
+  }
+}

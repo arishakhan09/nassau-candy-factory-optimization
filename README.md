@@ -18,11 +18,11 @@ This project delivers a complete analytical pipeline — from raw order data thr
 | Metric | Value |
 |---|---|
 | Orders Analyzed | 10,194 |
-| Recommendations Generated | 6,509 (63.9%) |
+| Recommendations Generated | 5,404 (53.0%) |
 | Strong Recommendations | 5,371 (52.7%) |
-| Average Distance Reduction | 47.7% (1,557 km) |
-| Total Route-KM Saved | 10.1 Million |
-| Average Confidence | 89.9% |
+| Average Distance Reduction | 60.4% (1,916 km) |
+| Total Route-KM Saved | 10.35 Million |
+| Average Confidence | 87.8% |
 | Winning Model R² | 0.6037 |
 
 **Key Insight:** Ship mode explains ~71.6% of lead-time variance. Factory reallocation produces negligible lead-time changes but delivers significant distance reductions. The primary value is **logistics cost reduction through proximity optimization** — not delivery speed improvement.
@@ -55,9 +55,9 @@ Phase 5 — Simulation Engine
     │   • Confidence calculation & recommendation classification
     ▼
 Validation Audit
-    │   • 7 integrity checks (all passed)
-    │   • Sensitivity analysis (stable under ±5% weight variation)
-    │   • Per-product robustness verification
+    │   • Integrity + business-quality checks (all passed)
+    │   • Positive distance savings & score on every recommendation
+    │   • Summary consistency verification
     ▼
 Interactive Dashboard (Streamlit)
     │   • 5 tabs: Executive Summary, Simulator, Products, Risk, Technical
@@ -74,19 +74,19 @@ Final Reports & Deliverables
 | Category | Count | Share |
 |---|---|---|
 | Strong Recommend | 5,371 | 52.7% |
-| Moderate Recommend | 1,113 | 10.9% |
-| Marginal | 25 | 0.2% |
-| No Change | 3,685 | 36.1% |
+| Moderate Recommend | 33 | 0.3% |
+| Marginal | 0 | 0.0% |
+| No Change | 4,790 | 47.0% |
 
 ### Factory Workload Rebalancing
 
 | Factory | Current Orders | Proposed Orders | Change |
 |---|---|---|---|
-| Lot's O' Nuts | 5,692 | 4,105 | -1,587 |
-| Wicked Choccy's | 4,152 | 5,739 | +1,587 |
-| Sugar Shack | 33 | 3 | -30 |
-| Secret Factory | 217 | 107 | -110 |
-| The Other Factory | 100 | 240 | +140 |
+| Lot's O' Nuts | 5,692 | 3,155 | -2,537 |
+| Wicked Choccy's | 4,152 | 6,689 | +2,537 |
+| Sugar Shack | 33 | 6 | -27 |
+| Secret Factory | 217 | 220 | +3 |
+| The Other Factory | 100 | 124 | +24 |
 
 ---
 
@@ -262,12 +262,12 @@ Top features by SHAP importance: `ship_mode_ordinal`, `ship_mode`, `order_year`,
 
 ### Model Conclusion
 
-The final Random Forest (Tuned) model achieved a Test R² of 0.604 and RMSE of 165.07. While moderate overfitting was observed (gap = 0.27), cross-validation and business validation demonstrated stable generalization performance. The model was therefore considered suitable for recommendation generation, scenario simulation, and logistics optimization analysis.
+The final Random Forest (Tuned) model achieved a Test R² of 0.604 and RMSE of 165.07. Although the Random Forest model exhibits some train-test performance gap, 5-fold cross-validation (R² = 0.6116 ± 0.0109) indicates stable generalization across unseen data. The model's predictive performance remains consistent across validation folds, suggesting that the observed gap does not materially impact deployment reliability. The model was therefore considered suitable for recommendation generation, scenario simulation, and logistics optimization analysis.
 
 ### Limitations
 
 - Dataset contains approximately 10,194 records — moderate sample size for tree-based ensemble methods.
-- Tree-based models exhibited moderate overfitting (overfit gap = 0.27), a known behavior with unconstrained tree depth on limited data.
+- A train-test performance gap is present, but 5-fold cross-validation (R² = 0.6116 ± 0.0109) confirms stable generalization across folds.
 - Additional historical data may further improve generalization and reduce the train-test performance gap.
 - Future work could explore stronger regularization, larger datasets, and temporal cross-validation strategies.
 

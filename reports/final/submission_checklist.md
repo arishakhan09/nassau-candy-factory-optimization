@@ -10,22 +10,22 @@
 | # | Deliverable | Location | Status |
 |---|---|---|---|
 | 1 | Raw source data | `data/raw/` | ✅ |
-| 2 | Cleaned dataset | `data/processed/cleaned_dataset.csv` | ✅ |
-| 3 | Modeling dataset | `data/processed/modeling_dataset.csv` | ✅ |
-| 4 | Trained model | `models/winning_model.joblib` | ✅ |
-| 5 | Label encoders | `models/label_encoders.joblib` | ✅ |
-| 6 | Model features config | `models/model_features.json` | ✅ |
-| 7 | Recommendations CSV | `data/outputs/recommendations/recommendations.csv` | ✅ |
-| 8 | Product summary | `data/outputs/recommendations/product_reallocation_summary.csv` | ✅ |
-| 9 | Simulation summary | `data/outputs/simulations/recommendation_summary.json` | ✅ |
-| 10 | Scenario matrix | `data/outputs/simulations/scenario_matrix.parquet` | ✅ |
-| 11 | Model comparison | `data/outputs/model_results/model_comparison.csv` | ✅ |
-| 12 | Feature importance | `data/outputs/model_results/feature_importance.csv` | ✅ |
-| 13 | SHAP importance | `data/outputs/model_results/shap_importance.csv` | ✅ |
-| 14 | Interactive dashboard | `dashboard/app.py` | ✅ |
-| 15 | Phase reports (1–5) | `reports/phase1/` through `reports/phase5/` | ✅ |
+| 2 | Trained model | `models/winning_model.joblib` | ✅ |
+| 3 | Label encoders | `models/label_encoders.joblib` | ✅ |
+| 4 | Model features config | `models/model_features.json` | ✅ |
+| 5 | Recommendations CSV | `data/outputs/recommendations/recommendations.csv` | ✅ |
+| 6 | Product summary | `data/outputs/recommendations/product_reallocation_summary.csv` | ✅ |
+| 7 | Simulation summary | `data/outputs/simulations/recommendation_summary.json` | ✅ |
+| 8 | Model comparison | `data/outputs/model_results/model_comparison.csv` | ✅ |
+| 9 | Feature importance | `data/outputs/model_results/feature_importance.csv` | ✅ |
+| 10 | SHAP importance | `data/outputs/model_results/shap_importance.csv` | ✅ |
+| 11 | Audit results | `data/outputs/audit/audit_results.json` | ✅ |
+| 12 | Dashboard readiness | `data/outputs/audit/dashboard_readiness.json` | ✅ |
+| 13 | Interactive dashboard | `dashboard/app.py` | ✅ |
+| 14 | Phase 5 report | `reports/phase5/phase5_report.md` | ✅ |
+| 15 | Recommendation integrity audit | `reports/final/recommendation_integrity_audit.md` | ✅ |
 | 16 | Executive summary | `reports/final/executive_summary.md` | ✅ |
-| 17 | Documentation | `docs/` | ✅ |
+| 17 | Project overview | `reports/final/project_overview.md` | ✅ |
 | 18 | Requirements file | `requirements.txt` | ✅ |
 | 19 | README | `README.md` | ✅ |
 

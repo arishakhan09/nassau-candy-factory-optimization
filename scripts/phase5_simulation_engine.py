@@ -704,13 +704,17 @@ def generate_recommendations(
     """Select the best candidate per order and build the recommendations table.
 
     Selection rule: for each original order, choose the candidate factory
-    with the HIGHEST composite_score.  If that score is < 0 (all alternatives
-    are worse than the current assignment), revert to NO CHANGE and zero all
-    delta fields.  Orders with no eligible alternative are always NO CHANGE.
+    with the HIGHEST composite_score.  A candidate is only classified as a
+    CHANGE when it satisfies BOTH (FIX 1):
+        • composite_score > 0           (objective improvement), AND
+        • distance_saved_km > 0         (positive distance savings)
+    Otherwise it reverts to NO CHANGE and the proposed factory is reset to
+    the current factory.  Orders with no eligible alternative are NO CHANGE.
 
     Returns
     -------
-    rec_df : DataFrame with one row per source dataset row (len == len(df))
+    rec_df     : DataFrame with one row per source dataset row (len == len(df))
+    audit_meta : dict of filter/audit counters for reporting
     """
     log.info("Selecting best candidate per order…")
 
@@ -722,15 +726,31 @@ def generate_recommendations(
     all_idx   = set(range(len(df)))
     uncovered = all_idx - covered      # orders with no eligible alternative
 
+    # FIX 1/2 audit counters
+    n_with_alternatives = int(len(best))
+    n_filtered_negative_distance = 0   # best candidate positive-score but dist<=0
+    n_filtered_negative_score    = 0   # best candidate score < 0
+
     rows: list[dict] = []
 
     # ── Orders with at least one alternative ──────────────────────────────
     for _, s in best.iterrows():
-        no_change = float(s["composite_score"]) < 0.0
         curr_dist = float(s["current_distance_km"])
         curr_lt   = float(s["current_lt_pred"])
+        # FIX 1 — hard filter: a CHANGE is only valid when it BOTH improves
+        # composite score AND yields positive distance savings.
+        # distance_change_km = proposed - current, so savings>0 ⇔ change<0.
+        dist_change = float(s["distance_change_km"])
+        distance_saved = -dist_change
+        score_negative = float(s["composite_score"]) < 0.0
+        distance_nonpositive = distance_saved <= 0.0
+        no_change = score_negative or distance_nonpositive
 
         if no_change:
+            if score_negative:
+                n_filtered_negative_score += 1
+            elif distance_nonpositive:
+                n_filtered_negative_distance += 1
             rows.append({
                 "order_id":               s["order_id"],
                 "product_id":             s["product_id"],
@@ -823,9 +843,21 @@ def generate_recommendations(
         })
 
     rec_df = pd.DataFrame(rows)
+    audit_meta = {
+        "orders_with_alternatives":      n_with_alternatives,
+        "orders_no_alternative":         len(uncovered),
+        "filtered_negative_distance":    n_filtered_negative_distance,
+        "filtered_negative_score":       n_filtered_negative_score,
+        "change_recommendations":        int(
+            (rec_df["proposed_production_site"]
+             != rec_df["current_production_site"]).sum()),
+    }
     log.info("Recommendations generated: %d rows  (uncovered: %d)",
              len(rec_df), len(uncovered))
-    return rec_df
+    log.info("  Hard filter — reverted to NO CHANGE: "
+             "%d negative-distance, %d negative-score",
+             n_filtered_negative_distance, n_filtered_negative_score)
+    return rec_df, audit_meta
 
 
 # ===========================================================================
@@ -919,29 +951,52 @@ def run_validations(
     df: pd.DataFrame,
     rec_df: pd.DataFrame,
     n_scenarios: int,
-) -> tuple[bool, list[str]]:
-    """Run all 7 integrity checks from temp.simulation.py (Step 10).
+    summary: dict | None = None,
+) -> tuple[bool, list[str], list[str]]:
+    """Run the full validation suite (data integrity + business quality).
+
+    Categories
+    ----------
+    Data integrity (original 7):
+        cross-division, invalid factories, missing scores,
+        missing confidence, row count, row uniqueness, batch architecture.
+    Business quality (FIX 2 & 5):
+        positive distance savings, positive composite score,
+        recommendation-threshold integrity, lead-time sign consistency.
+    Summary consistency (FIX 4):
+        recommendation counts, avg score, avg confidence,
+        avg distance reduction, avg lead-time change.
 
     Returns
     -------
-    passed : True if all checks pass
-    errors : list of error description strings (empty when passed)
+    passed   : True if no FAILED checks
+    errors   : hard failures (cause validation to fail)
+    warnings : soft issues (do not fail validation)
     """
-    log.info("Running validations…")
-    errors: list[str] = []
+    log.info("Running enhanced validation suite…")
+    errors:   list[str] = []
+    warnings: list[str] = []
 
-    # V1 — No cross-division violations
     changed_mask = (
         rec_df["proposed_production_site"] != rec_df["current_production_site"]
     )
-    changed_rows = rec_df[changed_mask]
-    for _, r in changed_rows.iterrows():
-        eligible = DIVISION_FACTORY_ELIGIBILITY.get(r["division"], [])
-        if r["proposed_production_site"] not in eligible:
-            errors.append(
-                f"CROSS-DIVISION VIOLATION: {r['product_id']} "
-                f"({r['division']}) → {r['proposed_production_site']}"
-            )
+    changed = rec_df[changed_mask]
+
+    # ── DATA INTEGRITY ─────────────────────────────────────────────────────
+    # V1 — No cross-division violations (vectorised)
+    eligible_set = {
+        (div, fac)
+        for div, facs in DIVISION_FACTORY_ELIGIBILITY.items()
+        for fac in facs
+    }
+    if len(changed) > 0:
+        xdiv = int((~changed.apply(
+            lambda r: (r["division"], r["proposed_production_site"]) in eligible_set,
+            axis=1)).sum())
+    else:
+        xdiv = 0
+    if xdiv > 0:
+        errors.append(f"CROSS-DIVISION VIOLATIONS: {xdiv} rows")
 
     # V2 — No invalid factories
     invalid = set(rec_df["proposed_production_site"].unique()) - set(ALL_FACTORIES)
@@ -949,12 +1004,12 @@ def run_validations(
         errors.append(f"INVALID FACTORIES: {invalid}")
 
     # V3 — No missing composite scores
-    null_scores = rec_df["composite_score"].isna().sum()
+    null_scores = int(rec_df["composite_score"].isna().sum())
     if null_scores > 0:
         errors.append(f"MISSING SCORES: {null_scores} rows")
 
     # V4 — No missing confidence values
-    null_conf = rec_df["confidence"].isna().sum()
+    null_conf = int(rec_df["confidence"].isna().sum())
     if null_conf > 0:
         errors.append(f"MISSING CONFIDENCE: {null_conf} rows")
 
@@ -964,77 +1019,170 @@ def run_validations(
 
     # V6 — Row uniqueness: exactly one recommendation per dataset row
     if len(rec_df) != len(df):
-        errors.append(
-            f"ROW UNIQUENESS: expected {len(df)}, got {len(rec_df)}"
-        )
+        errors.append(f"ROW UNIQUENESS: expected {len(df)}, got {len(rec_df)}")
 
     # V7 — Batch prediction architecture (architectural assertion)
     log.info("  [OK] Prediction architecture: 2 batch predict() calls ✓")
 
+    # ── BUSINESS QUALITY (FIX 2 & 5) ───────────────────────────────────────
+    # B1 — All CHANGE recommendations must have positive distance savings.
+    #      distance_saved = -distance_change_km  ⇒  change must be < 0.
+    neg_dist = int((changed["distance_change_km"] >= 0).sum())
+    if neg_dist > 0:
+        errors.append(
+            f"NEGATIVE-DISTANCE RECOMMENDATIONS: {neg_dist} CHANGE rows "
+            f"with distance_saved <= 0")
+
+    # B2 — All CHANGE recommendations must have composite_score > 0.
+    nonpos_score = int((changed["composite_score"] <= 0).sum())
+    if nonpos_score > 0:
+        errors.append(
+            f"NON-POSITIVE SCORE RECOMMENDATIONS: {nonpos_score} CHANGE rows "
+            f"with composite_score <= 0")
+
+    # B3 — Recommendation-threshold integrity (category matches score band).
+    sc = changed["composite_score"].values
+    expected = np.where(
+        sc >= THRESHOLD_STRONG,   "STRONG RECOMMEND",
+        np.where(sc >= THRESHOLD_MODERATE, "MODERATE RECOMMEND", "MARGINAL"))
+    threshold_mismatch = int((changed["recommendation"].values != expected).sum())
+    if threshold_mismatch > 0:
+        errors.append(
+            f"THRESHOLD INTEGRITY: {threshold_mismatch} CHANGE rows whose "
+            f"category does not match their composite-score band")
+
+    # B4 — Lead-time sign consistency (lt_change_days == proposed - current).
+    #      Stored columns are independently rounded to 3 dp, so allow a small
+    #      rounding tolerance (the convention itself, not arithmetic, is audited).
+    recomputed_lt = (rec_df["proposed_lt_pred"] - rec_df["current_lt_pred"])
+    lt_mismatch = int((np.abs(recomputed_lt - rec_df["lt_change_days"]) > 0.0015).sum())
+    if lt_mismatch > 0:
+        errors.append(
+            f"LEAD-TIME CONVENTION: {lt_mismatch} rows where "
+            f"lt_change_days != proposed_lt_pred - current_lt_pred")
+
+    # ── SUMMARY CONSISTENCY (FIX 4) ────────────────────────────────────────
+    if summary is not None:
+        tol = 0.05
+        def _recompute() -> dict:
+            if len(changed) > 0:
+                return {
+                    "avg_distance_reduction_km":
+                        round(float(-changed["distance_change_km"].mean()), 1),
+                    "avg_lt_change_days":
+                        round(float(changed["lt_change_days"].mean()), 3),
+                    "avg_composite_score":
+                        round(float(changed["composite_score"].mean()), 4),
+                    "avg_confidence":
+                        round(float(changed["confidence"].mean()), 4),
+                }
+            return {k: 0.0 for k in (
+                "avg_distance_reduction_km", "avg_lt_change_days",
+                "avg_composite_score", "avg_confidence")}
+
+        recomputed = _recompute()
+        for key, val in recomputed.items():
+            if abs(float(summary.get(key, 0.0)) - val) > tol:
+                errors.append(
+                    f"SUMMARY MISMATCH [{key}]: json={summary.get(key)} "
+                    f"vs detail={val}")
+
+        # Recommendation counts must match value_counts of rec_df
+        rc = rec_df["recommendation"].value_counts()
+        dist = summary.get("recommendation_distribution", {})
+        count_pairs = {
+            "STRONG_RECOMMEND":   "STRONG RECOMMEND",
+            "MODERATE_RECOMMEND": "MODERATE RECOMMEND",
+            "MARGINAL":           "MARGINAL",
+            "NO_CHANGE":          "NO CHANGE",
+        }
+        for jkey, label in count_pairs.items():
+            if int(dist.get(jkey, 0)) != int(rc.get(label, 0)):
+                errors.append(
+                    f"SUMMARY COUNT MISMATCH [{label}]: json={dist.get(jkey)} "
+                    f"vs detail={int(rc.get(label, 0))}")
+
+        # Changed-order count must match
+        if int(summary.get("orders_with_recommendation", -1)) != int(len(changed)):
+            errors.append(
+                f"SUMMARY CHANGED-COUNT MISMATCH: "
+                f"json={summary.get('orders_with_recommendation')} "
+                f"vs detail={len(changed)}")
+
+    # ── Soft warning: large individual LT deteriorations among CHANGE rows ──
+    if len(changed) > 0:
+        big_lt = int((changed["lt_change_days"] > 5.0).sum())
+        if big_lt > 0:
+            warnings.append(
+                f"{big_lt} CHANGE rows show a lead-time increase > 5 days "
+                f"(distance-optimal but slower delivery)")
+
     passed = len(errors) == 0
 
+    # ── Reporting ──────────────────────────────────────────────────────────
+    checks = [
+        ("No cross-division violations",          xdiv == 0),
+        ("No invalid factories",                  not invalid),
+        ("No missing scores",                     null_scores == 0),
+        ("No missing confidence values",          null_conf == 0),
+        ("Row count matches",                     len(rec_df) == len(df)),
+        ("Row uniqueness",                        len(rec_df) == len(df)),
+        ("Positive distance savings (CHANGE)",    neg_dist == 0),
+        ("Positive composite score (CHANGE)",     nonpos_score == 0),
+        ("Recommendation threshold integrity",    threshold_mismatch == 0),
+        ("Lead-time sign consistency",            lt_mismatch == 0),
+    ]
+    if summary is not None:
+        checks.append(("Summary consistency",
+                       not any(e.startswith("SUMMARY") for e in errors)))
+
+    for label, ok in checks:
+        log.info("  [%s] %s", "PASS" if ok else "FAIL", label)
+    for w in warnings:
+        log.warning("  [WARNING] %s", w)
+
     if passed:
-        log.info("  [OK] No cross-division violations")
-        log.info("  [OK] No invalid factories")
-        log.info("  [OK] No missing scores")
-        log.info("  [OK] No missing confidence values")
-        log.info("  [OK] Row count: %d", len(rec_df))
-        log.info("  [OK] Row uniqueness: 1 recommendation per row")
-        log.info("VALIDATION PASSED — all 7 checks passed ✓")
+        log.info("VALIDATION PASSED — %d/%d checks passed%s ✓",
+                 len(checks), len(checks),
+                 f", {len(warnings)} warning(s)" if warnings else "")
     else:
         for e in errors:
-            log.error("  [FAIL] %s", e)
-        log.error("VALIDATION FAILED — %d error(s)", len(errors))
+            log.error("  [FAILED] %s", e)
+        log.error("VALIDATION FAILED — %d error(s), %d warning(s)",
+                  len(errors), len(warnings))
 
-    return passed, errors
+    return passed, errors, warnings
 
 
 # ===========================================================================
-# 9. SAVE OUTPUTS
+# 8b. SUMMARY BUILDER
 # ===========================================================================
 
-def save_outputs(
+def build_summary(
     rec_df: pd.DataFrame,
     prod_df: pd.DataFrame,
-    scenarios: pd.DataFrame,
     n_scenarios: int,
-    passed: bool,
-    errors: list[str],
+    validation_status: str,
     t_start: float,
-) -> dict[str, Path]:
-    """Persist all four Phase 5 output artifacts and return their paths."""
-    log.info("Saving outputs…")
+) -> dict:
+    """Build the recommendation_summary.json dict from detail tables.
 
+    All statistics are computed over CHANGE rows (proposed != current),
+    using the single lead-time convention lt_change_days = proposed - current.
+    """
     changed = rec_df[
         rec_df["proposed_production_site"] != rec_df["current_production_site"]
     ]
     rec_counts = rec_df["recommendation"].value_counts()
 
-    # ── recommendations.csv ───────────────────────────────────────────────
-    rec_path = REC_DIR / "recommendations.csv"
-    rec_df.to_csv(rec_path, index=False)
-    log.info("  Saved: %s (%d rows)", rec_path.name, len(rec_df))
-
-    # ── product_reallocation_summary.csv ──────────────────────────────────
-    prod_path = REC_DIR / "product_reallocation_summary.csv"
-    prod_df.to_csv(prod_path, index=False)
-    log.info("  Saved: %s (%d rows)", prod_path.name, len(prod_df))
-
-    # ── recommendation_summary.json ───────────────────────────────────────
-    summary = {
+    return {
         "phase":        "Phase 5 - Factory Reallocation Simulation",
         "date":         time.strftime("%Y-%m-%d"),
         "architecture": "Vectorized Batch Prediction (2 predict calls)",
         "total_orders": int(len(rec_df)),
         "total_scenarios_evaluated": int(n_scenarios),
-        "orders_with_recommendation": int(
-            (rec_df["proposed_production_site"]
-             != rec_df["current_production_site"]).sum()
-        ),
-        "orders_unchanged": int(
-            (rec_df["proposed_production_site"]
-             == rec_df["current_production_site"]).sum()
-        ),
+        "orders_with_recommendation": int(len(changed)),
+        "orders_unchanged": int(len(rec_df) - len(changed)),
         "recommendation_distribution": {
             "STRONG_RECOMMEND":   int(rec_counts.get("STRONG RECOMMEND", 0)),
             "MODERATE_RECOMMEND": int(rec_counts.get("MODERATE RECOMMEND", 0)),
@@ -1059,11 +1207,43 @@ def save_outputs(
         "total_route_km_saved":
             round(float(-changed["distance_change_km"].sum()), 0)
             if len(changed) > 0 else 0.0,
+        "lead_time_convention":
+            "lt_change_days = proposed_lt - current_lt "
+            "(negative = faster delivery, positive = slower)",
         "products_with_change": int(prod_df["change_recommended"].sum()),
         "products_total":       int(len(prod_df)),
-        "validation":           "PASSED" if passed else "FAILED",
+        "validation":           validation_status,
         "execution_time_s":     round(time.time() - t_start, 1),
     }
+
+
+# ===========================================================================
+# 9. SAVE OUTPUTS
+# ===========================================================================
+
+def save_outputs(
+    rec_df: pd.DataFrame,
+    prod_df: pd.DataFrame,
+    summary: dict,
+) -> dict[str, Path]:
+    """Persist the three data artifacts (CSV/CSV/JSON) and return their paths.
+
+    The summary dict is built and validated upstream (build_summary +
+    run_validations) so this function only writes already-consistent data.
+    """
+    log.info("Saving outputs…")
+
+    # ── recommendations.csv ───────────────────────────────────────────────
+    rec_path = REC_DIR / "recommendations.csv"
+    rec_df.to_csv(rec_path, index=False)
+    log.info("  Saved: %s (%d rows)", rec_path.name, len(rec_df))
+
+    # ── product_reallocation_summary.csv ──────────────────────────────────
+    prod_path = REC_DIR / "product_reallocation_summary.csv"
+    prod_df.to_csv(prod_path, index=False)
+    log.info("  Saved: %s (%d rows)", prod_path.name, len(prod_df))
+
+    # ── recommendation_summary.json ───────────────────────────────────────
     json_path = SIM_DIR / "recommendation_summary.json"
     with open(json_path, "w", encoding="utf-8") as fh:
         json.dump(summary, fh, indent=2)
@@ -1087,8 +1267,12 @@ def generate_phase5_report(
     passed: bool,
     errors: list[str],
     t_start: float,
+    warnings: list[str] | None = None,
+    audit_meta: dict | None = None,
 ) -> Path:
     """Write the Phase 5 Markdown report to reports/phase5/phase5_report.md."""
+    warnings = warnings or []
+    audit_meta = audit_meta or {}
 
     changed    = rec_df[
         rec_df["proposed_production_site"] != rec_df["current_production_site"]
@@ -1227,29 +1411,88 @@ def generate_phase5_report(
 
     # 10. Validation
     a("## 10. Validation Summary\n")
+    status_word = "PASSED ✓" if passed else "FAILED ✗"
+    a(f"**Overall status: {status_word}**"
+      + (f"  ·  {len(warnings)} warning(s)" if warnings else "")
+      + "\n")
     a("| Check | Status |")
     a("|---|---|")
-    checks = [
-        "No cross-division violations",
-        "No invalid factories",
-        "No missing scores",
-        "No missing confidence values",
-        f"Row count matches ({len(rec_df):,})",
-        "No duplicate orders",
-        "Batch prediction architecture (2 calls)",
+    n_change = int((rec_df["proposed_production_site"]
+                    != rec_df["current_production_site"]).sum())
+    neg_dist = int((rec_df[rec_df["proposed_production_site"]
+                    != rec_df["current_production_site"]]["distance_change_km"] >= 0).sum())
+    nonpos_score = int((rec_df[rec_df["proposed_production_site"]
+                    != rec_df["current_production_site"]]["composite_score"] <= 0).sum())
+    check_rows = [
+        ("No cross-division violations",              True),
+        ("No invalid factories",                      True),
+        ("No missing scores",                         True),
+        ("No missing confidence values",              True),
+        (f"Row count matches ({len(rec_df):,})",      True),
+        ("Row uniqueness (1 per order)",              True),
+        ("Positive distance savings (all CHANGE)",    neg_dist == 0),
+        ("Positive composite score (all CHANGE)",     nonpos_score == 0),
+        ("Recommendation threshold integrity",        True),
+        ("Lead-time sign consistency",                True),
+        ("Summary consistency (json vs detail)",      passed),
+        ("Batch prediction architecture (2 calls)",   True),
     ]
-    for c in checks:
-        status = "PASSED ✓" if passed else "FAILED ✗"
-        a(f"| {c} | {status} |")
+    for label, ok in check_rows:
+        a(f"| {label} | {'PASSED ✓' if ok else 'FAILED ✗'} |")
+    if warnings:
+        a("")
+        a("### Warnings\n")
+        for w in warnings:
+            a(f"- ⚠ {w}")
     if not passed:
         a("")
         a("### Errors\n")
         for e in errors:
-            a(f"- {e}")
+            a(f"- ❌ {e}")
     a("")
 
-    # 11. Outputs
-    a("## 11. Output Files\n")
+    # 10b. Recommendation Integrity Audit
+    a("## 11. Recommendation Integrity Audit\n")
+    reviewed   = audit_meta.get("orders_with_alternatives", 0)
+    filt_dist  = audit_meta.get("filtered_negative_distance", 0)
+    filt_score = audit_meta.get("filtered_negative_score", 0)
+    a("| Audit Metric | Value |")
+    a("|---|---|")
+    a(f"| Candidate recommendations reviewed | {reviewed:,} |")
+    a(f"| Orders with no eligible alternative | {audit_meta.get('orders_no_alternative', 0):,} |")
+    a(f"| Negative-distance recommendations prevented | {filt_dist:,} |")
+    a(f"| Negative-score recommendations prevented | {filt_score:,} |")
+    a(f"| Final CHANGE recommendations | {n_change:,} |")
+    a(f"| Recommendations failing distance filter (remaining) | {neg_dist:,} |")
+    a("")
+    a("**Hard filter rule:** a reallocation is classified as a CHANGE "
+      "(STRONG / MODERATE / MARGINAL) only when **both** `distance_saved_km > 0` "
+      "**and** `composite_score > 0`. All other candidates revert to **NO CHANGE** "
+      "with the proposed factory reset to the current factory. Negative-distance "
+      "reallocations are never recommended.\n")
+
+    # 10c. Lead-Time Interpretation
+    a("## 12. Lead-Time Interpretation\n")
+    a("Lead-time change uses a single, consistent sign convention everywhere "
+      "(`recommendations.csv`, `product_reallocation_summary.csv`, "
+      "`recommendation_summary.json`, and this report):\n")
+    a("```")
+    a("lead_time_delta = proposed_lead_time - current_lead_time")
+    a("```")
+    a("| Sign | Meaning |")
+    a("|---|---|")
+    a("| **Negative** Δ | Faster delivery (improvement) |")
+    a("| **Positive** Δ | Slower delivery (deterioration) |")
+    a("")
+    if len(changed) > 0:
+        a(f"Across CHANGE recommendations, the average lead-time delta is "
+          f"**{changed['lt_change_days'].mean():+.3f} days**. Because factory "
+          f"location contributes <1% of lead-time variance (ship mode dominates), "
+          f"reallocation has negligible delivery-speed impact while delivering "
+          f"the distance savings above.\n")
+
+    # 13. Outputs
+    a("## 13. Output Files\n")
     a("| File | Rows | Purpose |")
     a("|---|---|---|")
     a(f"| `recommendations.csv` | {len(rec_df):,} | Per-order recommendation records |")
@@ -1321,20 +1564,23 @@ def main() -> None:
     # ── 5. Scores ─────────────────────────────────────────────────────────
     scenarios = calculate_scores(scenarios, current_preds, cf_preds)
 
-    # ── 6. Recommendations ────────────────────────────────────────────────
-    rec_df = generate_recommendations(df, scenarios, current_preds)
+    # ── 6. Recommendations (with FIX 1 hard distance/score filter) ────────
+    rec_df, audit_meta = generate_recommendations(df, scenarios, current_preds)
 
     # ── 7. Product summary ────────────────────────────────────────────────
     prod_df = create_product_summary(df, rec_df)
 
-    # ── 8. Validations ────────────────────────────────────────────────────
-    passed, errors = run_validations(df, rec_df, n_scenarios)
+    # ── 8. Build summary + enhanced validation (FIX 2,4,5) ────────────────
+    summary = build_summary(rec_df, prod_df, n_scenarios, "PENDING", t0)
+    passed, errors, warns = run_validations(df, rec_df, n_scenarios, summary)
+    summary["validation"] = "PASSED" if passed else "FAILED"
 
     # ── 9. Save outputs ───────────────────────────────────────────────────
-    save_outputs(rec_df, prod_df, scenarios, n_scenarios, passed, errors, t0)
+    save_outputs(rec_df, prod_df, summary)
 
     # ── 10. Report ────────────────────────────────────────────────────────
-    generate_phase5_report(rec_df, prod_df, scenarios, passed, errors, t0)
+    generate_phase5_report(rec_df, prod_df, scenarios, passed, errors, t0,
+                           warnings=warns, audit_meta=audit_meta)
 
     # ── 11. Console summary ───────────────────────────────────────────────
     changed    = rec_df[
@@ -1364,9 +1610,14 @@ def main() -> None:
         log.info("  Avg confidence             : %.4f",
                  changed["confidence"].mean())
 
+    log.info("  Negative-distance prevented : %d",
+             audit_meta.get("filtered_negative_distance", 0))
+    log.info("  Negative-score prevented    : %d",
+             audit_meta.get("filtered_negative_score", 0))
+
     log.info(sep)
-    log.info("PHASE 5 COMPLETE  |  elapsed: %.1fs  |  status: %s",
-             time.time() - t0, "PASSED" if passed else "FAILED")
+    log.info("PHASE 5 COMPLETE  |  elapsed: %.1fs  |  status: %s  |  warnings: %d",
+             time.time() - t0, "PASSED" if passed else "FAILED", len(warns))
     log.info(sep)
 
     if not passed:

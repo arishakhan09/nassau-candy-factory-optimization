@@ -58,6 +58,9 @@ TEST_SIZE = 0.30
 VAL_SHARE = 0.50  # of the temp split -> 15% val, 15% test
 RANDOM_STATE = 42
 
+# --- SHAP Sampling ---
+SHAP_SAMPLE_SIZE = 250
+
 # --- Factory Reference Data ---
 FACTORY_ASSIGNMENTS: dict[str, str] = {
     "CHO-FUD-51000": "Lot's O' Nuts",
@@ -569,8 +572,23 @@ def compute_shap(
 ) -> tuple[pd.DataFrame, dict[str, str], list[dict]]:
     """Version-safe SHAP analysis. Returns (importance_df, directions, local_examples)."""
     log.info("Computing SHAP values...")
+
+    # ── SHAP sampling for performance ──
+    X_shap = (
+        X_test.sample(
+            n=min(SHAP_SAMPLE_SIZE, len(X_test)),
+            random_state=42,
+        )
+        .reset_index(drop=True)
+    )
+    log.info(
+        "SHAP sampling enabled: %d of %d rows",
+        len(X_shap),
+        len(X_test),
+    )
+
     explainer = shap.TreeExplainer(model)
-    raw = explainer(X_test)
+    raw = explainer(X_shap)
 
     # Handle both Explanation objects and raw numpy
     shap_values = raw.values if hasattr(raw, "values") else np.array(raw)
@@ -587,7 +605,7 @@ def compute_shap(
     directions: dict[str, str] = {}
     for feat in importance.head(10)["Feature"]:
         idx = features.index(feat)
-        vals = X_test[feat].values.astype(float)
+        vals = X_shap[feat].values.astype(float)
         sv = shap_values[:, idx].astype(float)
         corr = np.corrcoef(vals, sv)[0, 1] if np.std(vals) > 0 else 0.0
         if np.isnan(corr):
@@ -600,7 +618,7 @@ def compute_shap(
             directions[feat] = "~ MIXED"
 
     # ── Local explanations (5 evenly-spaced samples) ──
-    n = len(X_test)
+    n = len(X_shap)
     sample_idxs = [int(i * (n - 1) / 4) for i in range(5)]
     local_examples: list[dict] = []
     for pos, si in enumerate(sample_idxs):
@@ -609,7 +627,7 @@ def compute_shap(
         local_examples.append({
             "position": pos,
             "top_contributors": [
-                {"feature": f, "shap": float(s), "value": float(X_test[f].iloc[si])}
+                {"feature": f, "shap": float(s), "value": float(X_shap[f].iloc[si])}
                 for f, s in top5
             ],
         })

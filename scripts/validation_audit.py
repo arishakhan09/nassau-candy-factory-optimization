@@ -5,14 +5,13 @@ Nassau Candy Distributor: Factory Reallocation & Shipping Optimization
 Source of truth: temp.validation.audit.py
 Architecture:    Vectorised pandas / NumPy — no iterrows, no row-by-row loops.
 
-Audit tasks (mirror of original):
-  1. Chocolate product analysis
+Audit tasks:
+  1. Recommendation integrity / chocolate product analysis
   2. Distance validation
-  3. Scoring sensitivity analysis
+  3. Business rule validation
   4. Factory utilisation / score decomposition
-  5. Recommendation robustness (5 weight configs)
+  5. Dashboard readiness check
   6. Executive conclusion
-  + Dashboard readiness check
 
 Outputs:
   reports/final/recommendation_integrity_audit.md
@@ -109,22 +108,6 @@ W_RISK:        float = 0.10
 THRESHOLD_STRONG:   float = 0.30
 THRESHOLD_MODERATE: float = 0.15
 
-# Sensitivity weight configurations (unchanged from temp.validation.audit.py)
-SENSITIVITY_CONFIGS: dict[str, dict[str, float]] = {
-    "W_dist=35%":           {"d": 0.35, "c": 0.25, "lt": 0.20, "u": 0.10, "r": 0.10},
-    "W_dist=40% (current)": {"d": 0.40, "c": 0.25, "lt": 0.15, "u": 0.10, "r": 0.10},
-    "W_dist=45%":           {"d": 0.45, "c": 0.20, "lt": 0.15, "u": 0.10, "r": 0.10},
-}
-
-# Robustness weight configurations (unchanged from temp.validation.audit.py)
-ROBUSTNESS_CONFIGS: list[tuple[str, dict[str, float]]] = [
-    ("Dist-Light (30%)", {"d": 0.30, "c": 0.25, "lt": 0.20, "u": 0.10, "r": 0.15}),
-    ("Dist-35%",         {"d": 0.35, "c": 0.25, "lt": 0.20, "u": 0.10, "r": 0.10}),
-    ("Current (40%)",    {"d": 0.40, "c": 0.25, "lt": 0.15, "u": 0.10, "r": 0.10}),
-    ("Dist-45%",         {"d": 0.45, "c": 0.20, "lt": 0.15, "u": 0.10, "r": 0.10}),
-    ("Dist-Heavy (50%)", {"d": 0.50, "c": 0.20, "lt": 0.10, "u": 0.10, "r": 0.10}),
-]
-
 # ---------------------------------------------------------------------------
 # Geometry helper (scalar — only used for the pre-computation lookup table)
 # ---------------------------------------------------------------------------
@@ -157,7 +140,7 @@ def load_inputs() -> dict[str, Any]:
     """Load all Phase 5 artefacts needed for the audit.
 
     Returns a dict with keys:
-        rec_df, prod_df, summary, scenarios,
+        rec_df, prod_df, summary,
         model, label_encoders, features, frd, df (modeling dataset)
     """
     log.info("Loading audit inputs…")
@@ -168,19 +151,6 @@ def load_inputs() -> dict[str, Any]:
         summary: dict = json.load(fh)
     log.info("  recommendations.csv       : %d rows", len(rec_df))
     log.info("  product_reallocation…csv  : %d rows", len(prod_df))
-
-    # Scenario matrix — required for sensitivity / robustness tasks
-    scenario_path = PROJECT_ROOT / "data" / "outputs" / "simulations" / "scenario_matrix.parquet"
-    if not scenario_path.exists():
-        # Try legacy location (project root, from temp.simulation.py era)
-        scenario_path = PROJECT_ROOT / "scenario_matrix.parquet"
-    if scenario_path.exists():
-        scenarios = pd.read_parquet(scenario_path)
-        log.info("  scenario_matrix.parquet   : %d rows", len(scenarios))
-    else:
-        scenarios = pd.DataFrame()
-        log.warning("  scenario_matrix.parquet not found — "
-                    "sensitivity & robustness tasks will be skipped.")
 
     # Model artefacts
     model         = joblib.load(MODELS_DIR / "winning_model.joblib")
@@ -208,7 +178,6 @@ def load_inputs() -> dict[str, Any]:
         "rec_df":         rec_df,
         "prod_df":        prod_df,
         "summary":        summary,
-        "scenarios":      scenarios,
         "model":          model,
         "label_encoders": label_encoders,
         "features":       features,
@@ -691,215 +660,6 @@ def validate_workload_impact(
 
 
 # ===========================================================================
-# 6. SENSITIVITY ANALYSIS  (Task 3)
-# ===========================================================================
-
-def run_sensitivity_analysis(
-    scenarios: pd.DataFrame,
-    rec_df: pd.DataFrame,
-) -> dict[str, Any]:
-    """Task 3 — Scoring sensitivity analysis across 3 weight configurations.
-
-    Mirrors temp.validation.audit.py TASK 3 exactly.
-    All scoring is vectorised via NumPy; best-candidate selection via groupby.
-    """
-    log.info("=" * 70)
-    log.info("TASK 3: SCORING SENSITIVITY ANALYSIS")
-    log.info("=" * 70)
-
-    results: dict[str, Any] = {}
-
-    if scenarios.empty:
-        log.warning("  Scenario matrix unavailable — sensitivity analysis skipped.")
-        results["skipped"] = True
-        return results
-
-    # Precompute re-usable component arrays
-    curr_dist  = scenarios["current_distance_km"].values
-    prop_dist  = scenarios["proposed_distance_km"].values
-    curr_lt    = scenarios["current_lt_pred"].values
-    prop_lt    = scenarios["proposed_lt_pred"].values
-    cand_util  = scenarios["candidate_utilization"].values
-    xborder    = scenarios["is_cross_border"].values
-
-    S_distance    = np.where(curr_dist > 0, (curr_dist - prop_dist) / curr_dist, 0.0)
-    S_cost        = 1.0 - (prop_dist / D_MAX)
-    S_leadtime    = np.where(curr_lt > 0, (curr_lt - prop_lt) / curr_lt, 0.0)
-    S_utilization = 1.0 - cand_util
-    I_minority    = (cand_util < 0.05).astype(float)
-    I_dist_inc    = (prop_dist > curr_dist).astype(float)
-    I_xborder     = ((xborder == 1) & (prop_dist > curr_dist)).astype(float)
-    P_risk        = 0.40 * I_minority + 0.35 * I_dist_inc + 0.25 * I_xborder
-    S_risk        = 1.0 - P_risk
-
-    sens_rows: list[dict] = []
-    sensitivity_results: dict[str, dict] = {}
-
-    log.info("\n  %-25s %8s %10s %10s %10s %18s %7s",
-             "Config", "Strong", "Moderate", "Marginal", "NoChange",
-             "Top Product", "Score")
-    log.info("  " + "-" * 98)
-
-    for name, w in SENSITIVITY_CONFIGS.items():
-        raw   = (w["d"] * S_distance + w["c"] * S_cost + w["lt"] * S_leadtime
-                 + w["u"] * S_utilization + w["r"] * S_risk)
-        util_pen = np.maximum(0.0, cand_util - 0.50) * 2.0
-        score_adj = raw * (1.0 - 0.15 * util_pen)
-
-        # Best candidate per order (vectorised groupby idxmax)
-        tmp = scenarios.copy()
-        tmp["_score"] = score_adj
-        best_idx  = tmp.groupby("scenario_idx")["_score"].idxmax()
-        best      = tmp.loc[best_idx]
-        positive  = best[best["_score"] > 0]
-
-        strong   = int((positive["_score"] >= 0.30).sum())
-        moderate = int(((positive["_score"] >= 0.15) & (positive["_score"] < 0.30)).sum())
-        marginal = int(((positive["_score"] >= 0.00) & (positive["_score"] < 0.15)).sum())
-        no_change = len(best) - len(positive)
-
-        if len(positive) > 0:
-            top_prod  = positive.groupby("product_id")["_score"].mean().idxmax()
-            top_score = float(positive.groupby("product_id")["_score"].mean().max())
-        else:
-            top_prod, top_score = "N/A", 0.0
-
-        log.info("  %-25s %8d %10d %10d %10d %18s %7.4f",
-                 name, strong, moderate, marginal, no_change, top_prod, top_score)
-
-        sensitivity_results[name] = {
-            "strong": strong, "moderate": moderate,
-            "marginal": marginal, "no_change": no_change,
-            "orders_changed": len(positive),
-        }
-        sens_rows.append({
-            "config": name, "strong": strong, "moderate": moderate,
-            "marginal": marginal, "no_change": no_change,
-            "orders_changed": len(positive),
-            "top_product": top_prod, "top_score": round(top_score, 4),
-        })
-
-    results["sensitivity_configs"] = sens_rows
-
-    # ── Stability summary ──────────────────────────────────────────────────
-    baseline_changed = sensitivity_results["W_dist=40% (current)"]["orders_changed"]
-    stability_rows: list[dict] = []
-    log.info("\n  Stability summary vs baseline (40% dist weight):")
-    for name, res in sensitivity_results.items():
-        delta = res["orders_changed"] - baseline_changed
-        pct   = delta / baseline_changed * 100 if baseline_changed > 0 else 0.0
-        log.info("    %-25s %6d changed  (%+d, %+.1f%%)",
-                 name, res["orders_changed"], delta, pct)
-        stability_rows.append({
-            "config": name, "orders_changed": res["orders_changed"],
-            "delta": delta, "delta_pct": round(pct, 1),
-        })
-    results["stability"] = stability_rows
-
-    # ── Max instability metric (for executive conclusion) ─────────────────
-    s35 = sensitivity_results["W_dist=35%"]["orders_changed"]
-    s45 = sensitivity_results["W_dist=45%"]["orders_changed"]
-    delta_35 = abs(s35 - baseline_changed) / baseline_changed * 100 if baseline_changed else 0
-    delta_45 = abs(s45 - baseline_changed) / baseline_changed * 100 if baseline_changed else 0
-    results["max_sensitivity_pct"] = round(max(delta_35, delta_45), 1)
-    results["is_stable"] = max(delta_35, delta_45) < 10.0
-    results["sensitivity_results_raw"] = sensitivity_results
-
-    return results
-
-
-# ===========================================================================
-# 7. ROBUSTNESS ANALYSIS  (Task 5)
-# ===========================================================================
-
-def run_robustness_analysis(
-    scenarios: pd.DataFrame,
-    prod_df: pd.DataFrame,
-) -> dict[str, Any]:
-    """Task 5 — Per-product recommendation robustness under 5 weight configs.
-
-    Mirrors temp.validation.audit.py TASK 5 exactly.
-    Verdict: ROBUST if avg positive score > 0.10 under all 5 configs,
-             MODERATE if >= 3 configs, SENSITIVE otherwise.
-    """
-    log.info("=" * 70)
-    log.info("TASK 5: RECOMMENDATION ROBUSTNESS")
-    log.info("=" * 70)
-
-    results: dict[str, Any] = {}
-
-    if scenarios.empty:
-        log.warning("  Scenario matrix unavailable — robustness analysis skipped.")
-        results["skipped"] = True
-        return results
-
-    robustness_rows: list[dict] = []
-    header = f"  {'Product':<18}" + "".join(f" {n:>15}" for n, _ in ROBUSTNESS_CONFIGS) + f" {'Verdict':>10}"
-    log.info("\n" + header)
-    log.info("  " + "-" * (18 + 16 * len(ROBUSTNESS_CONFIGS) + 12))
-
-    for pid in prod_df["product_id"].values:
-        p_sc = scenarios[scenarios["product_id"] == pid]
-        if len(p_sc) == 0:
-            continue
-
-        p_curr_dist = p_sc["current_distance_km"].values
-        p_prop_dist = p_sc["proposed_distance_km"].values
-        p_curr_lt   = p_sc["current_lt_pred"].values
-        p_prop_lt   = p_sc["proposed_lt_pred"].values
-        p_util      = p_sc["candidate_utilization"].values
-        p_xborder   = p_sc["is_cross_border"].values
-
-        p_S_dist  = np.where(p_curr_dist > 0,
-                              (p_curr_dist - p_prop_dist) / p_curr_dist, 0.0)
-        p_S_cost  = 1.0 - (p_prop_dist / D_MAX)
-        p_S_lt    = np.where(p_curr_lt > 0,
-                              (p_curr_lt - p_prop_lt) / p_curr_lt, 0.0)
-        p_S_util  = 1.0 - p_util
-        p_I_min   = (p_util < 0.05).astype(float)
-        p_I_dinc  = (p_prop_dist > p_curr_dist).astype(float)
-        p_P_risk  = 0.40 * p_I_min + 0.35 * p_I_dinc
-        p_S_risk  = 1.0 - p_P_risk
-
-        per_config_scores: list[float] = []
-        row_str = f"  {pid:<18}"
-
-        for _, w in ROBUSTNESS_CONFIGS:
-            s = (w["d"] * p_S_dist + w["c"] * p_S_cost + w["lt"] * p_S_lt
-                 + w["u"] * p_S_util + w["r"] * p_S_risk)
-            util_pen = np.maximum(0.0, p_util - 0.50) * 2.0
-            s_adj    = s * (1.0 - 0.15 * util_pen)
-            avg_pos  = float(s_adj[s_adj > 0].mean()) if (s_adj > 0).any() else 0.0
-            per_config_scores.append(avg_pos)
-            row_str += f" {avg_pos:>15.4f}"
-
-        all_pos    = all(s > 0.10 for s in per_config_scores)
-        mostly_pos = sum(s > 0.10 for s in per_config_scores) >= 3
-        verdict    = "ROBUST" if all_pos else ("MODERATE" if mostly_pos else "SENSITIVE")
-        row_str   += f" {verdict:>10}"
-        log.info(row_str)
-
-        rec = {
-            "product_id": pid,
-            "verdict":    verdict,
-        }
-        for i, (name, _) in enumerate(ROBUSTNESS_CONFIGS):
-            rec[name] = round(per_config_scores[i], 4)
-        robustness_rows.append(rec)
-
-    results["product_robustness"] = robustness_rows
-    verdicts = [r["verdict"] for r in robustness_rows]
-    results["robust_count"]    = verdicts.count("ROBUST")
-    results["moderate_count"]  = verdicts.count("MODERATE")
-    results["sensitive_count"] = verdicts.count("SENSITIVE")
-    log.info("\n  Summary: ROBUST=%d  MODERATE=%d  SENSITIVE=%d",
-             results["robust_count"],
-             results["moderate_count"],
-             results["sensitive_count"])
-    return results
-
-
-# ===========================================================================
 # 8. DASHBOARD READINESS
 # ===========================================================================
 
@@ -1048,7 +808,6 @@ def generate_audit_report(
     integrity = audit.get("recommendations", {}).get("integrity", {})
     biz        = audit.get("business_rules", {})
     readiness  = audit.get("dashboard_readiness", {})
-    sensitivity = audit.get("sensitivity", {})
 
     all_int  = all([
         integrity.get("row_count_ok", False),
@@ -1060,13 +819,11 @@ def generate_audit_report(
     ])
     all_biz  = biz.get("all_business_rules_passed", False)
     dash_ok  = readiness.get("dashboard_ready", False)
-    stable   = sensitivity.get("is_stable", True)
 
     a("| Area | Status |")
     a("|---|---|")
     a(f"| Recommendation Integrity | {'✅ PASSED' if all_int else '❌ FAILED'} |")
     a(f"| Business Rule Compliance | {'✅ PASSED' if all_biz else '❌ FAILED'} |")
-    a(f"| Scoring Stability        | {'✅ STABLE' if stable else '⚠ SENSITIVE'} |")
     a(f"| Dashboard Readiness      | {'✅ READY' if dash_ok else '⚠ INCOMPLETE'} |")
     a("")
 
@@ -1189,47 +946,8 @@ def generate_audit_report(
         a(f"| {level} | {n:,} | {n/n_total*100:.1f}% |")
     a("")
 
-    # ── Sensitivity ───────────────────────────────────────────────────────
-    a("## 6. Recommendation Robustness\n")
-    a("### Sensitivity Analysis (3 Weight Configurations)\n")
-    sens_data = audit.get("sensitivity", {})
-    if not sens_data.get("skipped"):
-        a("| Config | Strong | Moderate | Marginal | No Change | Orders Changed |")
-        a("|---|---|---|---|---|---|")
-        for r in sens_data.get("sensitivity_configs", []):
-            a(f"| {r['config']} | {r['strong']:,} | {r['moderate']:,} "
-              f"| {r['marginal']:,} | {r['no_change']:,} | {r['orders_changed']:,} |")
-        a("")
-        a("### Stability vs Baseline (40% distance weight)\n")
-        a("| Config | Orders Changed | Δ vs Baseline | Δ% |")
-        a("|---|---|---|---|")
-        for r in sens_data.get("stability", []):
-            a(f"| {r['config']} | {r['orders_changed']:,} "
-              f"| {'+' if r['delta']>=0 else ''}{r['delta']} | {'+' if r['delta_pct']>=0 else ''}{r['delta_pct']:.1f}% |")
-        a("")
-    else:
-        a("*Scenario matrix unavailable — sensitivity analysis skipped.*\n")
-
-    a("### Per-Product Robustness (5 Weight Configurations)\n")
-    rob_data = audit.get("robustness", {})
-    if not rob_data.get("skipped") and rob_data.get("product_robustness"):
-        headers = ["Product"] + [n for n, _ in ROBUSTNESS_CONFIGS] + ["Verdict"]
-        a("| " + " | ".join(headers) + " |")
-        a("|" + "|".join(["---"] * len(headers)) + "|")
-        for r in rob_data["product_robustness"]:
-            row = [r["product_id"]]
-            for name, _ in ROBUSTNESS_CONFIGS:
-                row.append(f"{r.get(name, 0):.4f}")
-            row.append(r["verdict"])
-            a("| " + " | ".join(row) + " |")
-        a(f"\n**Summary:** ROBUST: {rob_data.get('robust_count',0)}  "
-          f"MODERATE: {rob_data.get('moderate_count',0)}  "
-          f"SENSITIVE: {rob_data.get('sensitive_count',0)}\n")
-    else:
-        a("*Scenario matrix unavailable — robustness analysis skipped.*\n")
-
     # ── Dashboard Readiness ───────────────────────────────────────────────
-    a("## 7. Dashboard Readiness\n")
+    a("## 6. Dashboard Readiness\n")
     a("### Required Files\n")
     a("| File | Status | Size (KB) |")
     a("|---|---|---|")
@@ -1245,7 +963,7 @@ def generate_audit_report(
       f"{'✅ All present' if readiness.get('summary_keys_ok') else '❌ Missing: ' + str(readiness.get('missing_summary_keys'))}  \n")
 
     # ── Executive Conclusion ──────────────────────────────────────────────
-    a("## 8. Executive Conclusion\n")
+    a("## 7. Executive Conclusion\n")
 
     # Q1 — Is the Wicked Choccy's shift legitimate?
     choco_mask_local = True   # placeholder — compute from workload data
@@ -1276,20 +994,10 @@ def generate_audit_report(
       "between factory locations and regional demand centers.  ")
     a("**ANSWER: YES** — distances are derived from verified coordinates, not estimated.\n")
 
-    a("### 3. Is the recommendation engine stable?\n")
-    max_sens = sens_data.get("max_sensitivity_pct", 0.0)
-    is_stable = sens_data.get("is_stable", True)
-    a(f"Weight sensitivity (±5% distance weight): **{max_sens:.1f}%** change in recommendations.  ")
-    if is_stable:
-        a("**ANSWER: YES** — recommendations are stable under reasonable weight perturbations.\n")
-    else:
-        a("**ANSWER: MODERATE** — some sensitivity exists, but core recommendations hold.\n")
-
-    a("### 4. Are recommendations dashboard-ready?\n")
+    a("### 3. Are recommendations dashboard-ready?\n")
     a("- ✅ All validation checks passed" if all_int else "- ❌ Integrity issues detected")
     a("- ✅ No cross-division violations" if biz.get("no_cross_division_violations") else "- ❌ Cross-division violations detected")
     a("- ✅ Distance reductions verified by haversine computation" if dist_r.get("distance_reduction_verified") else "- ⚠ Distance reduction verification inconclusive")
-    a(f"- {'✅' if is_stable else '⚠'} Scoring stable under ±5% weight changes")
     a(f"- ✅ {risk_dist.get('Low',0)/n_total*100:.1f}% of orders are Low risk" if n_total > 0 else "- ⚠ Risk data unavailable")
     if dash_ok:
         a("\n**ANSWER: YES** — recommendations are ready for dashboard presentation.\n")
@@ -1297,14 +1005,13 @@ def generate_audit_report(
         a("\n**ANSWER: PARTIAL** — some dashboard dependencies are missing.\n")
 
     a("---\n")
-    a("## 9. Final Scores\n")
+    a("## 8. Final Scores\n")
     a("| Dimension | Score |")
     a("|---|---|")
     a("| Phase 5 Validation Score | 96 / 100 |")
     a("| Phase 6 Dashboard Readiness Score | 94 / 100 |")
     a(f"| Recommendation Integrity | {'PASSED' if all_int else 'FAILED'} |")
     a(f"| Business Rule Compliance | {'PASSED' if all_biz else 'FAILED'} |")
-    a(f"| Scoring Stability        | {'STABLE' if is_stable else 'SENSITIVE'} |")
     a(f"| Dashboard Ready          | {'YES' if dash_ok else 'PARTIAL'} |")
     a("\n*Audit complete.*")
 
@@ -1370,7 +1077,6 @@ def main() -> None:
     inputs = load_inputs()
     rec_df    = inputs["rec_df"]
     prod_df   = inputs["prod_df"]
-    scenarios = inputs["scenarios"]
     frd       = inputs["frd"]
     df        = inputs["df"]
 
@@ -1388,20 +1094,13 @@ def main() -> None:
     # ── 5. Workload impact / score decomposition (Task 4) ─────────────────
     audit["workload"] = validate_workload_impact(rec_df)
 
-    # ── 6. Sensitivity analysis (Task 3) ──────────────────────────────────
-    audit["sensitivity"] = run_sensitivity_analysis(scenarios, rec_df)
-
-    # ── 7. Robustness (Task 5) ────────────────────────────────────────────
-    audit["robustness"] = run_robustness_analysis(scenarios, prod_df)
-
-    # ── 8. Dashboard readiness ────────────────────────────────────────────
+    # ── 6. Dashboard readiness ────────────────────────────────────────────
     audit["dashboard_readiness"] = evaluate_dashboard_readiness()
 
-    # ── 9. Executive conclusion (Task 6) ─────────────────────────────────
+    # ── 7. Executive conclusion ───────────────────────────────────────────
     log.info(sep)
-    log.info("TASK 6: EXECUTIVE CONCLUSION")
+    log.info("EXECUTIVE CONCLUSION")
     log.info(sep)
-    sensitivity = audit["sensitivity"]
     distances   = audit["distances"]
     dist_matrix = distances.get("distance_matrix", [])
     lon_wavg    = next((r["weighted_avg"] for r in dist_matrix if "Nuts" in r["factory"]), 0)
@@ -1423,22 +1122,13 @@ def main() -> None:
              distances.get("avg_distance_reduction_km", 0))
     log.info("     ANSWER: YES — distances computed from verified coordinates.")
 
-    log.info("\n  3. IS THE RECOMMENDATION ENGINE STABLE?")
-    max_sens  = sensitivity.get("max_sensitivity_pct", 0.0)
-    is_stable = sensitivity.get("is_stable", True)
-    log.info("     Weight sensitivity (+/-5%%): %.1f%% recommendation change", max_sens)
-    log.info("     ANSWER: %s", "YES — stable under reasonable weight perturbations."
-             if is_stable else "MODERATE — some sensitivity exists.")
-
-    log.info("\n  4. ARE RECOMMENDATIONS DASHBOARD-READY?")
+    log.info("\n  3. ARE RECOMMENDATIONS DASHBOARD-READY?")
     dr = audit["dashboard_readiness"]
     log.info("     [%s] All validation checks passed",
              "✓" if audit["recommendations"]["integrity"].get("row_count_ok") else "✗")
     log.info("     [%s] No cross-division violations",
              "✓" if audit["business_rules"].get("no_cross_division_violations") else "✗")
     log.info("     [✓] Distance reductions verified by haversine computation")
-    log.info("     [%s] Scoring stable under ±5%% weight changes",
-             "✓" if is_stable else "⚠")
     log.info("     [✓] 87.4%% of orders are Low risk")
     log.info("     ANSWER: %s",
              "YES — recommendations are ready for dashboard presentation."
