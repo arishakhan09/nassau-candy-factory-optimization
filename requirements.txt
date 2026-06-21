@@ -1,0 +1,15 @@
+# Nassau Candy Distributor — Factory Optimization Dashboard
+# Core dependencies
+streamlit>=1.30.0
+plotly>=5.18.0
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Model training (required for scripts/, not dashboard)
+scikit-learn>=1.3.0
+xgboost>=2.0.0
+shap>=0.43.0
+joblib>=1.3.0
+
+# Data formats
+pyarrow>=14.0.0

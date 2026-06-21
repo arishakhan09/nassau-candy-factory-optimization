@@ -1,0 +1,25 @@
+{
+  "phase": "Phase 5 - Factory Reallocation Simulation",
+  "date": "2026-06-21",
+  "architecture": "Vectorized Batch Prediction (2 predict calls)",
+  "total_orders": 10194,
+  "total_scenarios_evaluated": 10234,
+  "orders_with_recommendation": 6509,
+  "orders_unchanged": 3685,
+  "recommendation_distribution": {
+    "STRONG_RECOMMEND": 5371,
+    "MODERATE_RECOMMEND": 1113,
+    "MARGINAL": 25,
+    "NO_CHANGE": 3685
+  },
+  "avg_distance_reduction_km": 1556.8,
+  "avg_distance_reduction_pct": 47.7,
+  "avg_lt_change_days": -0.004,
+  "avg_composite_score": 0.51,
+  "avg_confidence": 0.8986,
+  "total_route_km_saved": 10132926.0,
+  "products_with_change": 15,
+  "products_total": 15,
+  "validation": "PASSED",
+  "execution_time_s": 2.7
+}

@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Streamlit
+.streamlit/
+
+# Data (keep tracked via LFS or explicit includes)
+# Uncomment below if raw data should not be in git:
+# data/raw/*.csv
+
+# Model artifacts (large files — consider Git LFS)
+# models/*.joblib
+
+# Parquet (large simulation outputs)
+# data/outputs/simulations/*.parquet
+
+# Report generation scripts (local tooling, not part of the package)
+generate_report.py
+generate_executive_summary.py
+
+# Generated report figures (large PNGs, reproducible on demand)
+_report_figures/
+
+# Microsoft Office temp/lock files
+~$*.docx
+~$*.xlsx
+~$*.pptx
+*.tmp

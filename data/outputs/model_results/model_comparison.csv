@@ -1,0 +1,8 @@
+Model,Test_RMSE,Test_MAE,Test_R2,Train_R2,Val_R2,Training_Time_s,Overfit_Gap
+Linear Regression,1.0846,0.8997,0.6299,0.6446,0.6308,0.01,0.0148
+Random Forest (Default),1.0017,0.7908,0.6843,0.9544,0.7006,0.755,0.2701
+Random Forest (Tuned),0.9997,0.8002,0.6856,0.9105,0.7012,1.76,0.2249
+Gradient Boosting (Default),1.0382,0.8456,0.6609,0.7653,0.6754,2.152,0.1045
+Gradient Boosting (Tuned),1.0419,0.8364,0.6584,0.8583,0.6822,4.943,0.1998
+XGBoost (Default),1.0384,0.8447,0.6607,0.7647,0.6746,0.195,0.104
+XGBoost (Tuned),1.0235,0.8324,0.6704,0.812,0.6869,0.454,0.1416
