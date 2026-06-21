@@ -1,4 +1,8 @@
-# Python
+# ─────────────────────────────────────────────────────────────────────────────
+# Nassau Candy Factory Optimization — .gitignore
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Python bytecode / cache
 __pycache__/
 *.py[cod]
 *$py.class
@@ -7,6 +11,7 @@ __pycache__/
 dist/
 build/
 .eggs/
+*.pyc
 
 # Virtual environments
 venv/
@@ -32,22 +37,22 @@ desktop.ini
 # Streamlit
 .streamlit/
 
-# Data (keep tracked via LFS or explicit includes)
-# Uncomment below if raw data should not be in git:
-# data/raw/*.csv
+# ─────────────────────────────────────────────────────────────────────────────
+# Trained model artifacts (exceed GitHub 100 MB limit — reproducible via script)
+# ─────────────────────────────────────────────────────────────────────────────
+models/*.joblib
+models/*.pkl
 
-# Model artifacts (large files — consider Git LFS)
-# models/*.joblib
-
-# Parquet (large simulation outputs)
-# data/outputs/simulations/*.parquet
-
-# Report generation scripts (local tooling, not part of the package)
+# ─────────────────────────────────────────────────────────────────────────────
+# Generated reports & figures (reproducible on demand)
+# ─────────────────────────────────────────────────────────────────────────────
+*.docx
+_report_figures/
 generate_report.py
 generate_executive_summary.py
 
-# Generated report figures (large PNGs, reproducible on demand)
-_report_figures/
+# Parquet (large simulation outputs)
+data/outputs/simulations/*.parquet
 
 # Microsoft Office temp/lock files
 ~$*.docx
