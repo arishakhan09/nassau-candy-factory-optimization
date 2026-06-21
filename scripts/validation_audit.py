@@ -97,7 +97,7 @@ CHOCOLATE_PRODUCTS = [
 ]
 
 D_MAX:    float = 3450.0
-MODEL_R2: float = 0.6856
+MODEL_R2: float = 0.6037
 
 # Approved scoring weights
 W_DISTANCE:    float = 0.40

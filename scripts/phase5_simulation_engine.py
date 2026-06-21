@@ -101,7 +101,7 @@ W_UTILIZATION: float = 0.10
 W_RISK:        float = 0.10
 
 D_MAX:    float = 3450.0   # maximum observed factory-region distance (km)
-MODEL_R2: float = 0.6856   # Phase-4 winning model R² — fixed confidence component
+MODEL_R2: float = 0.6037   # Phase-4 winning model R² — fixed confidence component
 
 # Recommendation thresholds (approved — do not modify)
 THRESHOLD_STRONG:   float = 0.30

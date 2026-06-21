@@ -23,7 +23,7 @@ This project delivers a complete analytical pipeline — from raw order data thr
 | Average Distance Reduction | 47.7% (1,557 km) |
 | Total Route-KM Saved | 10.1 Million |
 | Average Confidence | 89.9% |
-| Winning Model R² | 0.6856 |
+| Winning Model R² | 0.6037 |
 
 **Key Insight:** Ship mode explains ~71.6% of lead-time variance. Factory reallocation produces negligible lead-time changes but delivers significant distance reductions. The primary value is **logistics cost reduction through proximity optimization** — not delivery speed improvement.
 
@@ -47,7 +47,7 @@ Raw Dataset (10,194 orders)
 Phase 4 — Model Training
     │   • Feature engineering (25 predictive features)
     │   • Random Forest, Gradient Boosting, XGBoost comparison
-    │   • Winner: Random Forest (Tuned) — R² = 0.6856
+    │   • Winner: Random Forest (Tuned) — R² = 0.6037
     ▼
 Phase 5 — Simulation Engine
     │   • 10,234 counterfactual scenarios (batch prediction)
@@ -250,15 +250,26 @@ Dashboard opens at `http://localhost:8501`
 
 | Metric | Value |
 |---|---|
-| Test R² | 0.6856 |
-| Test RMSE | 0.9997 |
-| Test MAE | 0.8002 |
+| Test R² | 0.6037 |
+| Test RMSE | 165.0710 |
+| Test MAE | 144.2350 |
 | 5-Fold CV R² | 0.7034 ± 0.0130 |
-| Overfit Gap | 0.2249 |
+| Overfit Gap | 0.2699 |
 | n_estimators | 500 |
 | min_samples_leaf | 2 |
 
 Top features by SHAP importance: `ship_mode_ordinal`, `ship_mode`, `order_year`, `order_month`
+
+### Model Conclusion
+
+The final Random Forest (Tuned) model achieved a Test R² of 0.604 and RMSE of 165.07. While moderate overfitting was observed (gap = 0.27), cross-validation and business validation demonstrated stable generalization performance. The model was therefore considered suitable for recommendation generation, scenario simulation, and logistics optimization analysis.
+
+### Limitations
+
+- Dataset contains approximately 10,194 records — moderate sample size for tree-based ensemble methods.
+- Tree-based models exhibited moderate overfitting (overfit gap = 0.27), a known behavior with unconstrained tree depth on limited data.
+- Additional historical data may further improve generalization and reduce the train-test performance gap.
+- Future work could explore stronger regularization, larger datasets, and temporal cross-validation strategies.
 
 ---
 

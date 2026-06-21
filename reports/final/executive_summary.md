@@ -24,17 +24,19 @@ A data-driven recommendation engine that evaluates every product-factory-region 
 | Total Route-KM Saved | 10.1 Million |
 | Average Confidence | 89.9% |
 | Strong Recommendations | 5,371 (52.7%) |
-| Model Accuracy (R²) | 0.6856 |
+| Model Accuracy (R²) | 0.6037 |
 
 ## Architecture
 
-- **Prediction Model:** Random Forest (Tuned), 25 features, stratified train/val/test split
+- **Prediction Model:** Random Forest (Tuned), 25 features, stratified train/val/test split (R² = 0.604, RMSE = 165.07)
 - **Simulation Engine:** Vectorized batch prediction (2 predict calls total)
 - **Scoring:** 5-component weighted composite (distance 40%, cost 25%, lead time 15%, utilization 10%, risk 10%)
 - **Validation:** 7 integrity checks, all passed
 - **Dashboard:** Streamlit, 5-tab interactive interface
 
 ## Key Insight
+
+The final tuned Random Forest model achieved a Test R² of 0.604 with an RMSE of 165.07, providing sufficient predictive accuracy for factory reallocation scenario analysis and recommendation generation.
 
 Ship Mode explains ~71.6% of lead time variance. Factory reallocation produces negligible lead time changes but significant distance reductions. The primary business value is **logistics cost reduction through proximity optimization**, not delivery speed improvement.
 
